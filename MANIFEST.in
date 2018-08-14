@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include techflow *.css
+recursive-include techflow *.csv
+recursive-include techflow *.html
+recursive-include techflow *.ico
+recursive-include techflow *.js
+recursive-include techflow *.json
+recursive-include techflow *.md
+recursive-include techflow *.png
+recursive-include techflow *.py
+recursive-include techflow *.svg
+recursive-include techflow *.txt
+recursive-exclude techflow *.pyc
