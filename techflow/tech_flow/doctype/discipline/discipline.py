@@ -65,12 +65,13 @@ class Discipline(NestedSet):
 		frappe.utils.nestedset.update_nsm(self)
 
 	def on_update(self):
-		self.update_nsm_model()
+		#self.update_nsm_model()
 		#self.check_recursion()
 		#self.reschedule_dependent_tasks()
 		#self.update_project()
 		#self.unassign_todo()
 		#self.populate_depends_on()
+		pass
 
 	def unassign_todo(self):
 		if self.status == "Closed" or self.status == "Cancelled":
@@ -100,11 +101,11 @@ class Discipline(NestedSet):
 
 	def check_recursion(self):
 		if self.flags.ignore_recursion_check: return
-		check_list = [['discipline', 'parent'], ['parent', 'discipline']]
+		check_list = [['discipline_name', 'parent'], ['parent', 'discipline_name']]
 		for d in check_list:
 			discipline_list, count = [self.name], 0
 			while (len(discipline_list) > count ):
-				disciplines = frappe.db.sql(" select %s from `tabDiscipline Depends On` where %s = %s " %
+				disciplines = frappe.db.sql(" select %s from `tabDiscipline Discipline Name` where %s = %s " %
 					(d[0], d[1], '%s'), cstr(discipline_list[count]))
 				count = count + 1
 				for b in disciplines:
@@ -185,30 +186,32 @@ def set_tasks_as_overdue():
 		and exp_end_date < CURDATE()
 		and `status` not in ('Closed', 'Cancelled')""")
 
+
 @frappe.whitelist()
-def get_children(doctype, parent, discipline=None, project=None, is_root=False):
-
-	filters = [['docstatus', '<', '2']]
-
+def get_children(doctype, parent='', project=None, discipline=None, is_group=True, **filters):
+	parent_field = 'parent_' + doctype.lower().replace(' ', '_')
+	filters=[['docstatus', '<' ,'2']]
+	
 	if discipline:
-		filters.append(['parent_discipline', '=', discipline])
-	elif parent and not is_root:
-		# via expand child
-		filters.append(['parent_discipline', '=', parent])
-	else:
-		filters.append(['ifnull(`parent_discipline`, "")', '=', ''])
+		filters.append(['ifnull(`{0}`,"")'.format(parent_field), '=', parent])
+	
+	if not discipline and not project:
+		filters.append(['ifnull(`{0}`,"All Disciplines")'.format(parent_field), '=', parent])
+					
+	if not discipline and project:
+		filters.append(['ifnull(`{0}`,"{1}")'.format(parent_field, project), '=', parent])
+		filters.append(['project','=', project])
 
-	if project:
-		filters.append(['project', '=', project])
 
-	disciplines = frappe.get_list(doctype, fields=[
+	doctype_meta = frappe.get_meta(doctype)
+	data = frappe.get_list(doctype, fields=[
 		'name as value',
-		'subject as title',
-		'is_group as expandable'
-	], filters=filters, order_by='name')
+		'{0} as title'.format(doctype_meta.get('title_field') or 'name'),
+		'is_group as expandable'],
+		filters=filters,
+		order_by='name')
 
-	# return disciplines
-	return disciplines
+	return data
 
 @frappe.whitelist()
 def add_node():
@@ -233,8 +236,18 @@ def add_multiple_disciplines(data, parent):
 	for d in data:
 		if not d.get("subject"): continue
 		new_doc['subject'] = d.get("subject")
+		new_doc['discipline_name'] = d.get("discipline_name")
 		new_discipline = frappe.get_doc(new_doc)
 		new_discipline.insert()
 
+	return {"a": "first","b": "second"}
+
 def on_doctype_update():
 	frappe.db.add_index("Discipline", ["lft", "rgt"])
+
+@frappe.whitelist()
+def get_info(data):
+	data_p = json.loads(data)
+	print(data_p)
+	dsc = frappe.get_doc("Discipline",data_p['value']) 
+	return dsc
