@@ -47,7 +47,7 @@ def split_pages(args):
 		try:
 			frappe.delete_doc("Project Document Pages", doc.name)
 		except Exception:
-				frappe.throw("""Not permitted. Do Not Know Why. """)
+				frappe.throw(""" Not permitted. Do Not Know Why. """)
 
 	
 	
